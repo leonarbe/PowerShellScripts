@@ -1,0 +1,80 @@
+#LAW = Log Analytics Workspace
+# Input bindings
+param($Request, $TriggerMetadata)
+
+# Replace with your values and make sure Environemntal variables are set
+$tenantId = $env:TENANT_ID
+$clientId =  $env:CLIENT_ID
+$clientSecret = $env:CLIENT_SECRET
+$dceEndpoint = "https://<end-point>.canadacentral-1.ingest.monitor.azure.com"
+# Not the name — it's the immutableId (GUID) '
+#$dcrImmutableId = $env:dcrImmutableId
+$dcrImmutableId = "dcr-<immutableID>"
+$streamName = $env:streamName
+
+#Sample log body (can also come from $Request.Body)
+$body = @(
+    @{
+        logLevel = "Info"
+        message = "Test log from Azure Function"
+        source = "FunctionApp"
+        eventTime = (Get-Date).ToString("o")
+    }
+) 
+$body = $Request.Body | ConvertTo-Json -Depth 5
+#$body = '[
+#  {
+#    "TimeGenerated": "2025-04-09 03:21:15.083",
+#    "ObjectType": "Table Schema",
+#    "ObjectName": "leo",
+#    "SizeInMB": 101,
+#    "UsedInMB": 201,
+#    "DataInMB": 310
+#  }
+#]'
+
+
+# 1. Get access token
+$tokenResponse = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" -Body @{
+    client_id     = $clientId
+    client_secret = $clientSecret
+    scope         = "https://monitor.azure.com/.default"
+    grant_type    = "client_credentials"
+}
+
+$accessToken = $tokenResponse.access_token
+
+# 2. Construct ingestion endpoint URL
+$uri = "$($dceEndpoint.Trim())/dataCollectionRules/$($dcrImmutableId.Trim())/streams/$($streamName.Trim())?api-version=2021-11-01-preview"
+
+Write-Output "Payload: $body"
+#Write-Output "dceEndpoint: '$dceEndpoint'"
+#Write-Output "dcrImmutableId: '$dcrImmutableId'"
+#Write-Output "streamName: '$streamName'"
+#Write-Output "Request URI: '$uri'"
+#Write-Output "tokenResponse: $tokenResponse"
+#Write-Output "accessToken: $accessToken"
+
+# 3. Send logs
+$response = Invoke-RestMethod -Method Post -Uri $uri -Headers @{
+    "Authorization" = "Bearer $accessToken"
+    "Content-Type"  = "application/json"
+} -Body $body
+
+
+
+# Return success
+# Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+#     StatusCode = 200
+#     Body = "Logs sent successfully!"
+# })
+try {
+    $null = $body | ConvertFrom-Json
+} catch {
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode = 400
+        Body = "Invalid JSON payload."
+    })
+    return
+}
+
