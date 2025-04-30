@@ -28,3 +28,13 @@ This library includes scripts for:
 ## 📁 Directory Structure
 
 . ├── AzureFunctions/ │ └── SendToLogAnalytics.ps1 ├── SharedFolders/ │ ├── CollectFolderStats.ps1 │ └── RenameAndArchiveFiles.ps1 ├── AdminTools/ │ ├── ListLoggedInUsers.ps1 │ └── SetScheduledTask.ps1 ├── templates/ │ └── AzureFunctionBindings.json └── README.md
+
+
+## 🚀 Usage
+
+Each script is standalone and includes inline documentation. Refer to individual script comments or usage notes for prerequisites, parameters, and execution instructions.
+
+Example: Executing a script to log shared folder usage:
+```powershell
+.\CollectFolderStats.ps1 -SourcePath "\\server\shared" -LogOutput "C:\Logs\FolderReport.csv"
+
